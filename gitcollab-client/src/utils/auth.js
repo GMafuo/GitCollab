@@ -1,50 +1,39 @@
-export const auth = {
-  isAuthenticated() {
-    return !!localStorage.getItem('github_token');
-  },
+const API_URL = process.env.NODE_ENV === 'production'
+  ? 'https://gitcollab.onrender.com'
+  : process.env.REACT_APP_API_URL;
 
-  getToken() {
-    return localStorage.getItem('github_token');
-  },
+const GITHUB_CLIENT_ID = process.env.REACT_APP_GITHUB_CLIENT_ID;
 
-  setToken(token) {
-    localStorage.setItem('github_token', token);
-  },
+export const loginWithGithub = () => {
+  const redirectUri = process.env.NODE_ENV === 'production'
+    ? 'https://gitcollab.onrender.com/auth/github/callback'
+    : 'http://localhost:5000/auth/github/callback';
 
-  removeToken() {
-    localStorage.removeItem('github_token');
-  },
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user+repo`;
+  
+  window.location.href = githubAuthUrl;
+};
 
-  async handleAuthCallback(code) {
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/github/callback?code=${code}`);
-      const data = await response.json();
-      
-      if (data.access_token) {
-        this.setToken(data.access_token);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Erreur lors de l\'authentification:', error);
-      return false;
+export const handleCallback = async (code) => {
+  try {
+    const response = await fetch(`${API_URL}/auth/github/callback?code=${code}`);
+    const data = await response.json();
+    
+    if (data.access_token) {
+      localStorage.setItem('github_token', data.access_token);
+      return true;
     }
-  },
-
-  async getUserInfo() {
-    const token = this.getToken();
-    if (!token) return null;
-
-    try {
-      const response = await fetch('https://api.github.com/user', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      return await response.json();
-    } catch (error) {
-      console.error('Erreur lors de la récupération des informations utilisateur:', error);
-      return null;
-    }
+    return false;
+  } catch (error) {
+    console.error('Erreur lors de l\'authentification:', error);
+    return false;
   }
+};
+
+export const isAuthenticated = () => {
+  return !!localStorage.getItem('github_token');
+};
+
+export const logout = () => {
+  localStorage.removeItem('github_token');
 }; 
